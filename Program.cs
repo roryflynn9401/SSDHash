@@ -190,7 +190,7 @@ static double CalculateDissimilarity(string jsonHash1, string jsonHash2)
 
             return new { dmax, dmin };
         })
-        .GroupBy(item => true)
+        .GroupBy(item => true) //needs better solution for performing aggregate
         .Select(group =>
         {
             var maxsum = group.Sum(item => item.dmax);
