@@ -2,8 +2,34 @@
 using SpookilySharp;
 using System.Text;
 
-string input1 = """{"timestamp": "2023-12-11T08:30:45.123Z","message": "User 'john_doe' successfully logged in."}""";
-string input2 = """{"timestamp": "2023-12-11T08:30:45.123Z","message": "This is a completely different message"}""";
+string input1 = """
+    {
+      "timestamp": "2023-12-11T14:20:30.500Z",
+      "info": {
+        "type": "Transaction",
+        "amount": 120.75,
+        "details": {
+          "sender": "user123",
+          "recipient": "merchant456",
+          "message": "Payment for services rendered."
+        }
+      }
+    }
+    """;
+string input2 = """
+    {
+      "timestamp": "2023-12-11T14:20:30.503Z",
+      "info": {
+        "type": "Transaction",
+        "amount": 120.80,
+        "details": {
+          "sender": "user123",
+          "recipient": "merchant456",
+          "message": "Payment for services completed."
+        }
+      }
+    }
+    """;
 
 var hash1 = GetHash(input1);
 var hash2 = GetHash(input2);
@@ -189,16 +215,12 @@ static double CalculateDissimilarity(string jsonHash1, string jsonHash2)
             var dmin = xi < yi ? xi : yi;
 
             return new { dmax, dmin };
-        })
-        .GroupBy(item => true) //needs better solution for performing aggregate
-        .Select(group =>
-        {
-            var maxsum = group.Sum(item => item.dmax);
-            var minsum = group.Sum(item => item.dmin);
+        });
 
-            return 1.0 - (double)minsum / maxsum;
-        })
-        .FirstOrDefault();
+    var sumDmax = result.Sum(r => r.dmax);
+    var sumDmin = result.Sum(r => r.dmin);
 
-    return result;
+    var dissim = 1 - (double)sumDmin / sumDmax;
+
+    return dissim;
 }
