@@ -14,9 +14,12 @@ public class Program
             var arg = args[i];
             switch (arg)
             {
-                case "-h":
                 case "--help":
                     HelpMenu();
+                    break;
+                case "-i":
+                case "-j":
+                    FileNames.Add(arg);
                     break;
                 default:
                     if (File.Exists(arg))
@@ -37,11 +40,19 @@ public class Program
             HelpMenu();
         }
 
-
+        
 
         var hashExtractor = new HashExtractor();
         
     }
+    #region File access
+
+    private string GetFileContents(string fileName)
+    {
+        return string.Empty;
+    }
+
+    #endregion
 
     #region Dissimilarity Calculations
 
