@@ -96,7 +96,7 @@ namespace SSDHash.Preprocessing
 
         private Dictionary<int, int> CountBuckets(int[] buckets)
         {
-            Dictionary<int, int> bucketCounts = new Dictionary<int, int>();
+            var bucketCounts = new Dictionary<int, int>();
 
             foreach (var bucket in buckets)
             {
@@ -123,7 +123,7 @@ namespace SSDHash.Preprocessing
             );
 
             var sortedCounts = scaledCounts.OrderByDescending(x => x.Value).ToList();
-            Dictionary<int, int> quantizedCounts = new Dictionary<int, int>();
+            var quantizedCounts = new Dictionary<int, int>();
 
             for (int i = 0; i < sortedCounts.Count; i++)
             {

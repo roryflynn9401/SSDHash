@@ -19,18 +19,21 @@ public class Program
                     break;
                 case "-i":
                 case "-j":
-                    FileNames.Add(arg);
-                    break;
                 default:
-                    if (File.Exists(arg))
+                    var isParam = (arg == "-i" || arg == "-j") && i < args.Length;
+                    var filePath = Path.GetFullPath(isParam ? args[i + 1] : arg);
+
+                    if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
                     {
-                        FileNames.Add(arg);
+                        FileNames.Add(filePath);
                     }
                     else
                     {
                         Console.WriteLine("Invalid command or file does not exist");
                         HelpMenu();
                     }
+
+                    if(isParam) i++;
                     break;
             }
         }
@@ -40,16 +43,64 @@ public class Program
             HelpMenu();
         }
 
-        
+        var file1Contents = GetFileContents(FileNames[0]);
+        var file2Contents = GetFileContents(FileNames[1]);
+
+        if(file1Contents is null || file2Contents is null)
+        {
+            Console.WriteLine("Error reading file contents");
+            return;
+        }
 
         var hashExtractor = new HashExtractor();
+
+        var hash1 = hashExtractor.GetHash(file1Contents);
+        var hash2 = hashExtractor.GetHash(file2Contents);
+
+        if(hash1 is null || hash2 is null)
+        {
+            Console.WriteLine("Error generating hash. Incorrect or invalid data format.");
+            return;
+        }
+
+        var dissimilarity = CalculateDissimilarity(hash1, hash2);
+
+        Console.WriteLine($"""
+            Hash (i) : {hash1}
+            Hash (j) : {hash2}
+            --------------------------------
+            Dissimilarity : {dissimilarity * 100}%
+            """);
         
     }
     #region File access
 
-    private string GetFileContents(string fileName)
+    private static string? GetFileContents(string fileName)
     {
-        return string.Empty;
+        try
+        {
+            using (var fs = File.OpenRead(fileName))
+            {
+                var sb = new StringBuilder();
+                using (var sr = new StreamReader(fs))
+                {
+                    while (!sr.EndOfStream)
+                    {
+                        sb.Append(sr.ReadLine());
+                    }
+                }
+                return sb.ToString();
+            }
+        }
+        catch(FileNotFoundException)
+        {
+            Console.WriteLine($"File {fileName} not found");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reading file {fileName}. Error: {ex.Message}");
+        }
+        return null;
     }
 
     #endregion
