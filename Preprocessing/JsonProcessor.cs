@@ -10,12 +10,25 @@ namespace SSDHash.Preprocessing
             var schemaObject = JObject.Parse(input);
             if (schemaObject is null) return null;
 
+            var properties = schemaObject.Properties();
+
             var values = schemaObject
                 .SelectTokens("$..*")
-                .Where(t => !t.HasValues)
-                .ToDictionary(t => t.Path, t => t.ToString());
+                .Where(t => !t.HasValues);
+            values = values.Where(t => !IsRemovalableDataType(t));
 
-            return values; 
+            var returnValues = values.ToDictionary(t => t.Path.Replace('.', '-'), t => t.ToString());
+            return returnValues; 
+        }
+
+        internal bool IsRemovalableDataType(JToken token)
+        {
+            return token.Type switch
+            {
+                JTokenType.Date => true,
+                JTokenType.Guid => true,
+                _ => false
+            };
         }
     }
 }
