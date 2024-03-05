@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HashAnalyser\HashAnalyser.csproj" />
+    <ProjectReference Include="..\SSDHash\SSDHash.csproj" />
+  </ItemGroup>
+
 </Project>
