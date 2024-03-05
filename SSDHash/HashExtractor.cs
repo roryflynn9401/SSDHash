@@ -1,20 +1,16 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SpookilySharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using SSDHash.Preprocessing;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace SSDHash.Preprocessing
+namespace SSDHash
 {
     public class HashExtractor
     {
-        public string? GetHash(string input)
+        public string? GetHash(string input, IDataProcessor? processor = null)
         {
-            var dataProcessor = GetDataProcessor(input);
+            var dataProcessor = processor == null ? GetDataProcessor(input) : processor;
 
             //Ensure valid input
             if (dataProcessor is null) return null;
@@ -183,7 +179,7 @@ namespace SSDHash.Preprocessing
         }
 
 
-        private IDataProcessor? GetDataProcessor(string input)
+        public virtual IDataProcessor? GetDataProcessor(string input)
         {
             if (IsValidJson(input))
             {

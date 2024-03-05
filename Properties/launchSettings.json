@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "SSDHash": {
-      "commandName": "Project",
-      "commandLineArgs": "-i ../../../Data/testInput1.json -j ../../../Data/testInput2.json"
-    }
-  }
-}
