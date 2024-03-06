@@ -1,14 +1,15 @@
 ﻿using CsvHelper;
+using HashAnalyser.Data;
 using System.Globalization;
 
-namespace HashAnalyser.Data
+namespace HashAnalyser.Configuration
 {
     /// <summary> 
     /// Class containing configuration data
     /// </summary>
     public static class Config
     {
-        public const string EncodingFilePath = "PositionalEmbeddings.csv";
+        public static string EncodingFilePath = $"{Environment.CurrentDirectory}/../../../Configuration/Files/PositionalEmbeddings.csv";
 
         private static Dictionary<int, string>? positionalEncoding;
 

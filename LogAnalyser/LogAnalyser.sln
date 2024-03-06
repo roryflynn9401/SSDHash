@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogAnalyser", "LogAnalyser.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SSDHash", "..\SSDHash\SSDHash.csproj", "{397A73E1-E44A-4DC9-A000-0CDE1AE27427}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HashAnalyser", "..\HashAnalyser\HashAnalyser.csproj", "{114E6779-9FF2-4DBB-995E-1E1AA196199B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{397A73E1-E44A-4DC9-A000-0CDE1AE27427}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{397A73E1-E44A-4DC9-A000-0CDE1AE27427}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{397A73E1-E44A-4DC9-A000-0CDE1AE27427}.Release|Any CPU.Build.0 = Release|Any CPU
+		{114E6779-9FF2-4DBB-995E-1E1AA196199B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{114E6779-9FF2-4DBB-995E-1E1AA196199B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{114E6779-9FF2-4DBB-995E-1E1AA196199B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{114E6779-9FF2-4DBB-995E-1E1AA196199B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
