@@ -1,5 +1,6 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
+using HashAnalyser.Configuration;
 using HashAnalyser.Data.Models;
 using Newtonsoft.Json;
 using SSDHash;

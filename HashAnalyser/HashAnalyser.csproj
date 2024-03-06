@@ -13,4 +13,8 @@
     <PackageReference Include="TorchSharp-cuda-windows" Version="0.102.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SSDHash\SSDHash.csproj" />
+  </ItemGroup>
+
 </Project>
