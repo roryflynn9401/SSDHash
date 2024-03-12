@@ -9,7 +9,7 @@ namespace HashAnalyser.Configuration
     /// </summary>
     public static class Config
     {
-        public static string EncodingFilePath = $"{Environment.CurrentDirectory}/../../../Configuration/Files/PositionalEmbeddings.csv";
+        public static string EncodingFilePath = $"{Environment.CurrentDirectory}/../../../../HashAnalyser/Configuration/Files/PositionalEmbeddings.csv";
 
         private static Dictionary<int, string>? positionalEncoding;
 

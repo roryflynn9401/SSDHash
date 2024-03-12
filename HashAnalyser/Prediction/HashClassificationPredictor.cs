@@ -1,6 +1,8 @@
 ﻿using HashAnalyser.Data;
-using HashAnalyser.Data.Models;
+using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,48 +18,77 @@ namespace HashAnalyser.Prediction
     /// </summary>
     public class HashClassificationPredictor
     {
-        private HashModel[]? _inputData;
-        private Dictionary<string, HashPrediction> _results = new();
+        private Dictionary<string, BinaryHashPrediction> _binaryResults = new();
+        private Dictionary<string, MulticlassHashPrediction> _multiclassResults = new();
+        protected bool _useCPU = false;
+        private MLContext _mlContext;
 
-        public HashClassificationPredictor(DeviceType? deviceType = null)
+        public HashClassificationPredictor(DeviceType deviceType = DeviceType.CUDA)
         {
-            torch.InitializeDeviceType(deviceType == null ? DeviceType.CUDA : deviceType.Value);
+            if (deviceType == DeviceType.CPU) { _useCPU = true; }
+            torch.InitializeDeviceType(deviceType);
+
+            _mlContext = new MLContext(seed: 0)
+            {
+                GpuDeviceId = 0,
+                FallbackToCpu = _useCPU,
+            };
         }
 
         /// <summary> 
-        /// Method for performing classification using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Method for performing binary classification using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
         /// Returns mapping of Hash, PredictedLabel.
         /// </summary>
-        public Dictionary<string, HashPrediction> Predict(string dataSetFileName, string modelName = "model.zip")
+        public Dictionary<string, BinaryHashPrediction> PredictBinary(string dataSetFileName, string modelName = "BinaryModel.zip")
         {
-            var mlContext = new MLContext(seed: 0)
-            {
-                GpuDeviceId = 0,
-                FallbackToCpu = false,
-            };
-            ITransformer model = mlContext.Model.Load("model.zip", out var schema);
+
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
             TrainingDataFormatter _formatter = new(dataSetFileName);
+            BinaryHashModel[] inputData = _formatter.LoadFileForBinary(dataSetFileName).ToArray();
+            
+            if (inputData is null || inputData.Length == 0) throw new ArgumentNullException(nameof(inputData));
 
-            _inputData = _formatter.LoadFile(dataSetFileName).Select(x => new HashModel(x.Hash)).ToArray();
-            if (_inputData is null || _inputData.Length == 0) throw new ArgumentNullException(nameof(_inputData));
+            var engine = _mlContext.Model.CreatePredictionEngine<BinaryHashModel, BinaryHashPrediction>(model);
 
-            var dataView = mlContext.Data.LoadFromEnumerable(_inputData);
-
-            var engine = mlContext.Model.CreatePredictionEngine<HashModel, HashPrediction>(model);
-
-            foreach (var item in _inputData)
+            foreach (var item in inputData)
             {
-                _results[item.Hash] = engine.Predict(new HashModel(item.Hash));
+                _binaryResults[item.Hash] = engine.Predict(new BinaryHashModel(item.Hash));
             }
 
-            if(_results.Count == 0) throw new ArgumentNullException(nameof(_results));
-            return _results;
+            if (_binaryResults.Count == 0) throw new ArgumentNullException(nameof(_binaryResults));
+            
+            EvaluateBinaryPredictions(inputData);
+            return _binaryResults;
+        }
+
+        /// <summary> 
+        /// Method for performing multiclass classification using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Returns mapping of Hash, PredictedLabel.
+        /// </summary>
+        public Dictionary<string, MulticlassHashPrediction> PredictMulticlass(string dataSetFileName, string modelName = "MulticlassModel.zip")
+        {
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
+            TrainingDataFormatter _formatter = new(dataSetFileName);
+
+            MulticlassHashModel[] inputData = _formatter.LoadFileForMulticlass(dataSetFileName).ToArray();
+            var unlabeledData = inputData.Select(x => new BinaryHashModel { Hash = x.Hash }).ToArray();
+            if (inputData is null || inputData.Length == 0) throw new ArgumentNullException(nameof(inputData));
+
+            var engine = _mlContext.Model.CreatePredictionEngine<MulticlassHashModel, MulticlassHashPrediction>(model);
+
+            foreach (var item in inputData)
+            {
+                _multiclassResults[item.Hash] = engine.Predict(new MulticlassHashModel(item.Hash));
+            }
+
+            if (_multiclassResults.Count == 0) throw new ArgumentNullException(nameof(_binaryResults));
+            return _multiclassResults;
         }
 
         /// <summary>
         /// Method for outputing metrics for labeled, unseen data. Requires Predict to have been run which populates <paramref name="_inputData">_inputData</paramref> and <paramref name="_results">_results</paramref>
         /// </summary>
-        public void VerifyPredictions()
+        public void EvaluateBinaryPredictions(BinaryHashModel[] inputData)
         {
             int correctPredictions = 0;
             int incorrectPredictions = 0;
@@ -68,23 +99,23 @@ namespace HashAnalyser.Prediction
 
             var predictions = new Dictionary<string, int>();
 
-            foreach (var result in _results)
+            foreach (var result in _binaryResults)
             {
-                var label = _inputData.FirstOrDefault(x => x.Hash == result.Key)?.Label;
+                var label = inputData.FirstOrDefault(x => x.Hash == result.Key)?.Label;
 
-                if (label == "malicious" && result.Value.PredictedLabel == "malicious")
+                if (label == true && result.Value.PredictedLabel == true)
                 {
                     TP++;
                 }
-                else if (label == "malicious")
+                else if (label == true)
                 {
                     FP++;
                 }
-                else if (label == "benign" && result.Value.PredictedLabel == "benign")
+                else if (label == false && result.Value.PredictedLabel == false)
                 {
                     TN++;
                 }
-                else if (label == "benign")
+                else if (label == false)
                 {
                     FN++;
                 }

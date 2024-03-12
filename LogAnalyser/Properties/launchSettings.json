@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LogAnalyser": {
+      "commandName": "Project",
+      "commandLineArgs": "predict -b --dataset trainingData.csv"
+    }
+  }
+}

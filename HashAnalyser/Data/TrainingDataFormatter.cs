@@ -2,6 +2,8 @@
 using CsvHelper.Configuration;
 using HashAnalyser.Configuration;
 using HashAnalyser.Data.Models;
+using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
 using Newtonsoft.Json;
 using SSDHash;
 using System.Globalization;
@@ -24,7 +26,7 @@ namespace HashAnalyser.Data
         #region Constructors
 
         /// <summary> 
-        /// Class for formatting training data. Provides utilities to parse data using batchingd to create a suitable training set. 
+        /// Class for formatting training data. Provides utilities to parse data using batching to create a suitable training set. 
         /// </summary>
         /// <remarks>
         /// Supply file inputs using <paramref name="inpuFilePath"/>, which parses <paramref name="maxRowsPerChunk"/> rows per batch and appends the values to the output file suppled using <paramref name="outputFilePath"/>
@@ -37,7 +39,7 @@ namespace HashAnalyser.Data
 
         }
         /// <summary> 
-        /// Class for formatting training data. Provides utilities to parse data using batchingd to create a suitable training set. 
+        /// Class for formatting training data. Provides utilities to parse data using batching to create a suitable training set. 
         /// </summary>
         /// <remarks>
         /// Supply file inputs using <paramref name="inpuFilePath"/>, which parses <paramref name="maxRowsPerChunk"/> rows per batch and appends the values to the output file suppled using <paramref name="outputFilePath"/>
@@ -71,7 +73,37 @@ namespace HashAnalyser.Data
         /// <summary> 
         /// Method to load formatted training data from the file specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
         /// </summary>
-        public IEnumerable<HashModel> LoadFile(string filePath, int? maxCount = null)
+        public IEnumerable<BinaryHashModel> LoadFileForBinary(string filePath, int? maxCount = null)
+        {
+            var bCount = 0;
+
+            using (var reader = new StreamReader(filePath))
+            {
+                using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
+                {
+                    var count = 0;
+
+                    while (cr.Read())
+                    {
+                        var record = cr.GetRecord<Log>();
+                        if (record.Label.ToLower() == "port-scan") { continue; }
+                        if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.Hash.Length != 64) { continue; }
+                        if (record.Label.ToLower() == "benign") { bCount++; }
+                        if (record.Label.ToLower() == "benign" && bCount > 25000) { continue; }
+                        count++;
+
+                        yield return new BinaryHashModel(PositionallyEncode(record.Hash), MapBinaryLabel(record.Label.ToLower()));
+                    }
+                }
+
+            }
+        }
+
+        /// <summary> 
+        /// Method to load formatted training data from the file specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
+        /// </summary>
+        public IEnumerable<MulticlassHashModel> LoadFileForMulticlass(string filePath, int? maxCount = null)
         {
             using (var reader = new StreamReader(filePath))
             {
@@ -87,7 +119,7 @@ namespace HashAnalyser.Data
                         if (record.Hash.Length != 64) { continue; }
                         count++;
 
-                        yield return new HashModel(PositionallyEncode(record.Hash), record.label.ToLower());
+                        yield return new MulticlassHashModel(PositionallyEncode(record.Hash), record.Label.ToLower());
                     }
                 }
 
@@ -267,6 +299,30 @@ namespace HashAnalyser.Data
             }
         }
 
+        protected string MapMulticlassLabel(string label)
+        {
+            switch (label.ToLower())
+            {
+                case "port-scan": return "2";
+                case "c&c": return "3";
+                case "dos": return "4";
+                default: throw new InvalidDataException();
+            }
+        }
+
+        protected bool MapBinaryLabel(string label)
+        {
+            switch (label.ToLower())
+            {
+                case "benign": return false;
+                case "port-scan": return true;
+                case "c&c": return true;
+                case "dos": return true;
+                case "malicious": return true;
+                default: throw new InvalidDataException();
+            }
+        }
+
         #endregion
     }
 
@@ -277,7 +333,6 @@ namespace HashAnalyser.Data
     {
 
         public string Hash { get; set; }
-        public string label { get; set; }
-        public string detailed_label { get; set; }
+        public string Label { get; set; }
     }
 }
