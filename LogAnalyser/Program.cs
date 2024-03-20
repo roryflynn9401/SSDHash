@@ -1,6 +1,7 @@
-﻿using HashAnalyser.Prediction;
+﻿using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
+using HashAnalyser.Prediction;
 using HashAnalyser.Training;
-using System.Linq;
 
 namespace LogAnalyser
 {
@@ -50,6 +51,9 @@ namespace LogAnalyser
                     case "-b":
                         TrainBinaryModel(trainArgs);
                         break;
+                    case "-m":
+                        TrainMulticlassModel(trainArgs);
+                        break;
                 }
             }
         }
@@ -62,6 +66,9 @@ namespace LogAnalyser
                 {
                     case "-b":
                         PredictBinaryModel(trainArgs);
+                        break;
+                    case "-m":
+                        PredictMulticlassModel(trainArgs);
                         break;
                 }
             }
@@ -94,9 +101,12 @@ namespace LogAnalyser
 
         private static Action PrintInvalidFileText = () => Console.WriteLine("Invalid file path arguement supplied. Provide the path to the dataset file using --dataset PATH/TO/FILE");
 
-        private static void TrainBinaryModel(string[] trainArgs)
+        private static void TrainBinaryModel(string[] trainArgs) => TrainModel(trainArgs, new BinaryHashAnalysisTrainer());
+
+        private static void TrainMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassHashAnalysisTrainer());
+
+        private static void TrainModel(string[] trainArgs, HashAnalysisTrainer trainer)
         {
-            var trainer = new BinaryHashAnalysisTrainer();
             string? filePath = null;
 
             for(int i =0; i < trainArgs.Length; i++)
@@ -124,7 +134,8 @@ namespace LogAnalyser
             trainer.TrainModel(filePath);
         }
 
-        private static void PredictBinaryModel(string[] trainArgs)
+
+        private static Dictionary<string, BinaryHashPrediction>? PredictBinaryModel(string[] trainArgs)
         {
             var transformer = new HashClassificationPredictor();
             string? filePath = null;
@@ -141,18 +152,47 @@ namespace LogAnalyser
                     else
                     {
                         PrintInvalidFileText();
-                        return;
+                        return null;
                     }
                 }
             }
             if (filePath is null)
             {
                 PrintInvalidFileText();
-                return;
+                return null;
             }
 
-            var results = transformer.PredictBinary(filePath);
-            transformer.VerifyBinaryPredictions();
+            return transformer.PredictBinary(filePath);
+        }
+
+        private static Dictionary<string, MulticlassHashPrediction>? PredictMulticlassModel(string[] trainArgs)
+        {
+            var transformer = new HashClassificationPredictor();
+            string? filePath = null;
+
+            for (int i = 0; i < trainArgs.Length; i++)
+            {
+                if (trainArgs[i] == "--dataset")
+                {
+                    if (i < trainArgs.Length - 1 && File.Exists(trainArgs[i + 1]))
+                    {
+                        filePath = trainArgs[i + 1];
+                        break;
+                    }
+                    else
+                    {
+                        PrintInvalidFileText();
+                        return null;
+                    }
+                }
+            }
+            if (filePath is null)
+            {
+                PrintInvalidFileText();
+                return null;
+            }
+
+            return transformer.PredictMulticlass(filePath);
         }
 
         #endregion

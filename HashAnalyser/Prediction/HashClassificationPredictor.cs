@@ -106,18 +106,22 @@ namespace HashAnalyser.Prediction
                 if (label == true && result.Value.PredictedLabel == true)
                 {
                     TP++;
+                    correctPredictions++;
                 }
-                else if (label == true)
+                else if (label == false && result.Value.PredictedLabel == true)
                 {
                     FP++;
+                    incorrectPredictions++;
                 }
                 else if (label == false && result.Value.PredictedLabel == false)
                 {
                     TN++;
+                    correctPredictions++;
                 }
-                else if (label == false)
+                else if (label == true && result.Value.PredictedLabel == false)
                 {
                     FN++;
+                    incorrectPredictions++;
                 }
             }
 

@@ -86,11 +86,8 @@ namespace HashAnalyser.Data
                     while (cr.Read())
                     {
                         var record = cr.GetRecord<Log>();
-                        if (record.Label.ToLower() == "port-scan") { continue; }
                         if (maxCount != null && count > maxCount) { yield break; }
                         if (record.Hash.Length != 64) { continue; }
-                        if (record.Label.ToLower() == "benign") { bCount++; }
-                        if (record.Label.ToLower() == "benign" && bCount > 25000) { continue; }
                         count++;
 
                         yield return new BinaryHashModel(PositionallyEncode(record.Hash), MapBinaryLabel(record.Label.ToLower()));
@@ -105,6 +102,7 @@ namespace HashAnalyser.Data
         /// </summary>
         public IEnumerable<MulticlassHashModel> LoadFileForMulticlass(string filePath, int? maxCount = null)
         {
+            var classes = new[] { "c&c", "port-scan", "dos" };
             using (var reader = new StreamReader(filePath))
             {
                 using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
@@ -117,6 +115,7 @@ namespace HashAnalyser.Data
 
                         if (maxCount != null && count > maxCount) { yield break; }
                         if (record.Hash.Length != 64) { continue; }
+                        if (!classes.Contains(record.Label)) continue;
                         count++;
 
                         yield return new MulticlassHashModel(PositionallyEncode(record.Hash), record.Label.ToLower());
