@@ -18,7 +18,6 @@ namespace HashAnalyser.Data
         private string[] _filePaths;
         private int _maxRowsPerChunk = 100000;
         private int _rowCount = 100000;
-        private HashExtractor _hashExtractor = new();
         private string _outputFilePath = "out.csv";
 
         #endregion

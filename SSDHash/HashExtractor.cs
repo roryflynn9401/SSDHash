@@ -152,7 +152,7 @@ namespace SSDHash
 
         #region Helper Methods 
 
-        private bool IsValidJson(string inputString)
+        public bool IsValidJson(string inputString)
         {
             try
             {
@@ -165,7 +165,7 @@ namespace SSDHash
             }
         }
 
-        private bool IsValidXml(string inputString)
+        public bool IsValidXml(string inputString)
         {
             try
             {

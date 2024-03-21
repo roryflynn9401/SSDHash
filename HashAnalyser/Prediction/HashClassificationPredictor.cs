@@ -1,4 +1,5 @@
 ﻿using HashAnalyser.Data;
+using HashAnalyser.Data.Models;
 using HashAnalyser.Data.Models.Binary;
 using HashAnalyser.Data.Models.Multiclass;
 using Microsoft.ML;
@@ -18,8 +19,6 @@ namespace HashAnalyser.Prediction
     /// </summary>
     public class HashClassificationPredictor
     {
-        private Dictionary<string, BinaryHashPrediction> _binaryResults = new();
-        private Dictionary<string, MulticlassHashPrediction> _multiclassResults = new();
         protected bool _useCPU = false;
         private MLContext _mlContext;
 
@@ -36,11 +35,44 @@ namespace HashAnalyser.Prediction
         }
 
         /// <summary> 
-        /// Method for performing binary classification using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Method for performing binary classification for unseen data using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
         /// Returns mapping of Hash, PredictedLabel.
         /// </summary>
-        public Dictionary<string, BinaryHashPrediction> PredictBinary(string dataSetFileName, string modelName = "BinaryModel.zip")
+        public IDataView? PredictBinary(string[] hashes, string modelName = "BinaryModel.zip")
         {
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
+
+            var input = hashes.Select(x => new HashInput(x));
+            var inputData = _mlContext.Data.LoadFromEnumerable(input);
+
+            var results = model.Transform(inputData);
+
+            return results;
+        }
+
+        /// <summary> 
+        /// Method for performing multiclass classification for unseen data using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Returns mapping of Hash, PredictedLabel.
+        /// </summary>
+        public IDataView? PredictBinary(string[] hashes, string modelName = "BinaryModel.zip")
+        {
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
+
+            var input = hashes.Select(x => new HashInput(x));
+            var inputData = _mlContext.Data.LoadFromEnumerable(input);
+
+            var results = model.Transform(inputData);
+
+            return results;
+        }
+
+        /// <summary> 
+        /// Method for performing binary classification for unseen labeled data using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Returns mapping of Hash, PredictedLabel and prints metrics in the console.
+        /// </summary>
+        public Dictionary<string, BinaryHashPrediction> PredictLabeledBinary(string dataSetFileName, string modelName = "BinaryModel.zip")
+        {
+            Dictionary<string, BinaryHashPrediction> binaryResults = new();
 
             ITransformer model = _mlContext.Model.Load(modelName, out var schema);
             TrainingDataFormatter _formatter = new(dataSetFileName);
@@ -52,21 +84,22 @@ namespace HashAnalyser.Prediction
 
             foreach (var item in inputData)
             {
-                _binaryResults[item.Hash] = engine.Predict(new BinaryHashModel(item.Hash));
+                binaryResults[item.Hash] = engine.Predict(new BinaryHashModel(item.Hash));
             }
 
-            if (_binaryResults.Count == 0) throw new ArgumentNullException(nameof(_binaryResults));
+            if (binaryResults.Count == 0) throw new ArgumentNullException(nameof(binaryResults));
             
             EvaluateBinaryPredictions(inputData);
-            return _binaryResults;
+            return binaryResults;
         }
 
         /// <summary> 
-        /// Method for performing multiclass classification using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
+        /// Method for performing multiclass classification for unseen labeled data using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
         /// Returns mapping of Hash, PredictedLabel.
         /// </summary>
-        public Dictionary<string, MulticlassHashPrediction> PredictMulticlass(string dataSetFileName, string modelName = "MulticlassModel.zip")
+        public Dictionary<string, MulticlassHashPrediction> PredictLabeledMulticlass(string dataSetFileName, string modelName = "MulticlassModel.zip")
         {
+            Dictionary<string, MulticlassHashPrediction> multiclassResults = new();
             ITransformer model = _mlContext.Model.Load(modelName, out var schema);
             TrainingDataFormatter _formatter = new(dataSetFileName);
 
@@ -78,11 +111,11 @@ namespace HashAnalyser.Prediction
 
             foreach (var item in inputData)
             {
-                _multiclassResults[item.Hash] = engine.Predict(new MulticlassHashModel(item.Hash));
+                multiclassResults[item.Hash] = engine.Predict(new MulticlassHashModel(item.Hash));
             }
 
-            if (_multiclassResults.Count == 0) throw new ArgumentNullException(nameof(_binaryResults));
-            return _multiclassResults;
+            if (multiclassResults.Count == 0) throw new ArgumentNullException(nameof(multiclassResults));
+            return multiclassResults;
         }
 
         /// <summary>

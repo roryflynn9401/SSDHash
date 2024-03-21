@@ -39,6 +39,8 @@ namespace LogAnalyser
                 case "predict":
                     ProcessPredictCommand(commandParams);
                     break;
+                case "pipeline":
+                    break;
             }
         }
 
@@ -162,7 +164,7 @@ namespace LogAnalyser
                 return null;
             }
 
-            return transformer.PredictBinary(filePath);
+            return transformer.PredictLabeledBinary(filePath);
         }
 
         private static Dictionary<string, MulticlassHashPrediction>? PredictMulticlassModel(string[] trainArgs)
@@ -192,7 +194,7 @@ namespace LogAnalyser
                 return null;
             }
 
-            return transformer.PredictMulticlass(filePath);
+            return transformer.PredictLabeledMulticlass(filePath);
         }
 
         #endregion
