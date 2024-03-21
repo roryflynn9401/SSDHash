@@ -51,6 +51,11 @@ namespace LogAnalyser.Processing
 
         }
 
+        private void Cluster() 
+        {
+            
+        }
+
         private async Task<string[]> ComputeHashes(string[] inputs)
         {
             var tasks = new List<Task<string>>();

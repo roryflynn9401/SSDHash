@@ -40,12 +40,16 @@ namespace HashAnalyser.Prediction
         /// </summary>
         public IDataView? PredictBinary(string[] hashes, string modelName = "BinaryModel.zip")
         {
-            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
-
             var input = hashes.Select(x => new HashInput(x));
             var inputData = _mlContext.Data.LoadFromEnumerable(input);
 
-            var results = model.Transform(inputData);
+            return PredictBinary(inputData, modelName);
+        }
+
+        public IDataView? PredictBinary(IDataView data, string modelName = "BinaryModel.zip")
+        {
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
+            var results = model.Transform(data);
 
             return results;
         }
@@ -54,14 +58,18 @@ namespace HashAnalyser.Prediction
         /// Method for performing multiclass classification for unseen data using the model and data supplied in <paramref name="modelName"/> and <paramref name="dataSetFileName"/>. 
         /// Returns mapping of Hash, PredictedLabel.
         /// </summary>
-        public IDataView? PredictBinary(string[] hashes, string modelName = "BinaryModel.zip")
+        public IDataView? PredictMulticlass(string[] hashes, string modelName = "MulticlassModel.zip")
         {
-            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
-
             var input = hashes.Select(x => new HashInput(x));
             var inputData = _mlContext.Data.LoadFromEnumerable(input);
 
-            var results = model.Transform(inputData);
+            return PredictMulticlass(inputData, modelName);
+        }
+
+        public IDataView? PredictMulticlass(IDataView data, string modelName = "MulticlassModel.zip")
+        {
+            ITransformer model = _mlContext.Model.Load(modelName, out var schema);
+            var results = model.Transform(data);
 
             return results;
         }
