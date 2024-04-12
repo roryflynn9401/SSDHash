@@ -1,25 +1,26 @@
-#SSDHash & Log Analysis Tool
+# SSDHash & Log Analysis Tool
 
-#Features
+# Features
 - Hash Files or string inputs using SSDHash
 - Train Binary/Multiclass Models on the fuzzy hash outputs
 - Use trained models to make predictions
 - Run Performance benchmarks on both the algorithm and ml components
 - Verify a hash is valid
 
-#Requirements
-##Framework
+# Requirements
+## Framework
 - .Net 7.0
 
-##Packages
+## Packages
 - ML.Net
 - Microsoft.ML.Torchsharp
 - TorchSharp-cuda-windows or TorchSharp-cpu-windows (or their linux equivalents)
 - BenchmarkDotnet (For Performance benchmarks)
 - Scottplot (for visualizations)
 
-#Usage
--h|--help : Help Menu,
+# Usage
+```yaml
+ -h|--help : Help Menu,
 
 Commands:
 train 
@@ -52,6 +53,6 @@ test:
         -ml                 - Runs performance tests related to the ML classifiers (Performance tests must be run in Release mode)
         -v                  - Verify a hash is valid - Supply hash with --hash
     Variables:
-                    --hash              - Hash input for validation
+                    --hash              - Hash input for validation```
 
 
