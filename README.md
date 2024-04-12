@@ -30,8 +30,8 @@ train
         -c|                 - Trains a model using KMeans clustering
     Variables
         --dataset           - File path for training/test dataset in CSV format
-predict:
-        Arguments:
+predict: - Predict using each model individually
+    Arguments:
         -b|                 - Predicts the class of a hash record using a binary classification model  (benign, malicious)
         -m|                 - Predicts the class of a hash record using a multiclass classification model (c&c, dos etc.)
     Variables
@@ -47,12 +47,12 @@ hash:   - Hashes an input using SSDHash
         -m|                 - Hashes all records in the given dataset file
     Variables
         --dataset           - File path for model inputs in JSON,XML or CSV format
-test:
+test: - Various performance or validation tests
     Arguements:
         -ssd                - Runs performance tests related to SSDHash (Performance tests must be run in Release mode)
         -ml                 - Runs performance tests related to the ML classifiers (Performance tests must be run in Release mode)
         -v                  - Verify a hash is valid - Supply hash with --hash
     Variables:
-                    --hash              - Hash input for validation```
+                    --hash              - Hash input for validation
 
 
