@@ -4,7 +4,8 @@ namespace HashAnalyser.Data.Models.Multiclass
 {
     public class MulticlassHashPrediction
     {
+        public string Hash { get; set; }
         [ColumnName("PredictedLabel")]
-        public bool PredictedLabel { get; set; }
+        public string PredictedLabel { get; set; }
     }
 }

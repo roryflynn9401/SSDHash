@@ -1,11 +1,10 @@
 ﻿using HashAnalyser.Data;
 using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
 using HashAnalyser.Training.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
-using Microsoft.ML.Tokenizers;
 using TorchSharp;
-using static Microsoft.ML.DataOperationsCatalog;
 
 namespace HashAnalyser.Training
 {
@@ -47,12 +46,12 @@ namespace HashAnalyser.Training
             Console.WriteLine("=====================Evaluating model performance on test set=====================\n");
             IDataView transformedTest = model.Transform(data);
 
-            BinaryClassificationMetrics metrics = _mlContext.BinaryClassification.Evaluate(transformedTest);
+            BinaryClassificationMetrics metrics = _mlContext.BinaryClassification.Evaluate(transformedTest, probabilityColumnName: "Score");
 
             Console.WriteLine($""" 
             Accuracy: {metrics.Accuracy}
             F1 Score: {metrics.F1Score}
-
+            ROC AUC: {metrics.AreaUnderRocCurve}
             {metrics.ConfusionMatrix.GetFormattedConfusionTable()}
 
             """);

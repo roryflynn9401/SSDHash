@@ -1,7 +1,13 @@
-﻿using HashAnalyser.Data;
+﻿using CsvHelper;
+using HashAnalyser.Clustering;
+using HashAnalyser.Data;
+using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
 using HashAnalyser.Prediction;
+using Microsoft.ML;
 using Newtonsoft.Json;
 using SSDHash;
+using System.Globalization;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 
@@ -14,91 +20,42 @@ namespace LogAnalyser.Processing
 
         public LogPredictionPipeline() { }
 
-        public async Task ProcessLogs(string fileInput)
+        public MulticlassHashPrediction[]? ProcessLogs(string fileInput)
         {
-            //batch for larger files
-            string data = File.ReadAllText(fileInput);
-
-            Datatype? dataType = _hashExtractor.IsValidXml(data) ? Datatype.XML : 
-                                    _hashExtractor.IsValidJson(data) ?  Datatype.JSON : null;
-
-            object[]? objData = Array.Empty<object>();
-
-            if(dataType == Datatype.JSON)
-            {
-                 objData = ParseJsonData(data, Datatype.JSON);
-
-            }
-            if (objData is null) return;
-
-            string[] strObj = new string[objData.Length];
-
-            for(int i = 0; i < objData.Length; i++) 
-            {
-                strObj[i] = JsonConvert.SerializeObject(objData[i]);
-            }
-            var hashes = await ComputeHashes(strObj);
-
-            if(hashes is null) return;
+            var formatter = new TrainingDataFormatter(fileInput);
+            var hashes = formatter.LoadFile(fileInput).ToArray();
 
             var binaryResults = _classificationPredictor.PredictBinary(hashes);
-            if(binaryResults is null) return;
+            if (binaryResults is null) return null;
 
-            var multiclassResults = _classificationPredictor.PredictMulticlass(binaryResults);
-            if(multiclassResults is null) return;
+            var context = new MLContext(0);
+            var binResults = context.Data.CreateEnumerable<BinaryHashPrediction>(binaryResults, false).ToArray();
 
+            Console.WriteLine($"""
 
+                Binary: 
 
+                Benign Predictions: {binResults.Count(x => !x.PredictedLabel)}
+                Malicious Predictions: {binResults.Count(x => x.PredictedLabel)}
+                """);
+
+            var malPredictions = binResults.Where(x => x.PredictedLabel).Select(x => new MulticlassHashModel(x.Hash));
+            var multDataview = context.Data.LoadFromEnumerable(malPredictions);
+
+            var multiclassResults = _classificationPredictor.PredictMulticlass(multDataview);
+            if (multiclassResults is null) return null;
+
+            var multPredictions = context.Data.CreateEnumerable<MulticlassHashPrediction>(multiclassResults, false).ToArray();
+
+            Console.WriteLine($"""
+                
+                Mutliclass:
+
+                Port-Scan Predictions: {multPredictions.Count(x => x.PredictedLabel == "port-scan")}
+                C&C Predictions: {multPredictions.Count(x => x.PredictedLabel == "c&c")}
+                DOS Predictions: {multPredictions.Count(x => x.PredictedLabel == "dos")}
+                """);
+            return multPredictions;
         }
-
-        private void Cluster() 
-        {
-            
-        }
-
-        private async Task<string[]> ComputeHashes(string[] inputs)
-        {
-            var tasks = new List<Task<string>>();
-
-            foreach(var input in inputs)
-            {
-                tasks.Add(ComputeHash(input));
-            }
-
-
-            await Task.WhenAll(tasks);
-            return tasks.Select(x => x.Result).ToArray();
-
-        }
-
-        private async Task<string> ComputeHash(string input) => _hashExtractor.GetHash(input) ?? string.Empty;
-        
-
-        private object[]? ParseJsonData(string data, Datatype dataType)
-        {
-            try
-            {
-                object[]? splitData = JsonConvert.DeserializeObject<object[]>(data);
-                if(splitData is null)
-                {
-                    Console.WriteLine("Invalid JSON data detected.  ");
-                    return null;
-                }
-
-                return splitData;
-
-            }
-            catch (ArgumentNullException e) 
-            {
-                Console.WriteLine("Invalid JSON data detected.  " + e.Message);
-            }  
-
-            return null;
-        }
-    }
-    public enum Datatype
-    {
-        JSON = 1,
-        XML = 2,
     }
 }

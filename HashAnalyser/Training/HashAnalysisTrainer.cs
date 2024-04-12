@@ -53,13 +53,13 @@ namespace HashAnalyser.Training
         /// <summary> 
         /// Method for training a new model with the data supplied <paramref name="dataView"/>. 
         /// </summary>
-        protected void Train(IEstimator<ITransformer> trainer, IDataView dataView, string modelName = "model.zip")
+        protected ITransformer Train(IEstimator<ITransformer> trainer, IDataView dataView, string modelName = "model.zip")
         {
             dataView = _mlContext.Data.ShuffleRows(dataView);
             TrainTestData trainValidationData = _mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
             Console.WriteLine("==================Begining training==================\n");
-            ITransformer model = trainer.Fit(trainValidationData.TrainSet);
+            var model = trainer.Fit(trainValidationData.TrainSet);
             Console.WriteLine("==================Training complete==================\n");
 
             Console.WriteLine("Saving model... \n");
@@ -67,6 +67,7 @@ namespace HashAnalyser.Training
             Console.WriteLine("=====================Model saved=====================\n");
 
             Evaluate(model, trainValidationData.TestSet);
+            return model;
         }
 
     }

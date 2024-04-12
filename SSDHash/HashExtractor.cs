@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using CsvHelper;
+using Newtonsoft.Json;
 using SpookilySharp;
 using SSDHash.Preprocessing;
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 
@@ -178,6 +180,24 @@ namespace SSDHash
             }
         }
 
+        public bool IsValidCsv(string inputString)
+        {
+            try
+            {
+                using(var tr = new StringReader(inputString))
+                {
+                    using (var csvp = new CsvParser(tr, CultureInfo.InvariantCulture))
+                    {
+                        while(csvp.Read()) { }
+                        return true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
 
         public virtual IDataProcessor? GetDataProcessor(string input)
         {

@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 using HashAnalyser.Configuration;
 using HashAnalyser.Data.Models;
 using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Clustering;
 using HashAnalyser.Data.Models.Multiclass;
 using Newtonsoft.Json;
 using SSDHash;
@@ -70,6 +71,31 @@ namespace HashAnalyser.Data
         }
 
         /// <summary> 
+        /// Method to load a file containing hashes specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
+        /// </summary>
+        public IEnumerable<string> LoadFile(string filePath, int? maxCount = null)
+        {
+            using (var reader = new StreamReader(filePath))
+            {
+                using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
+                {
+                    var count = 0;
+
+                    while (cr.Read())
+                    {
+                        var record = cr.GetRecord<string>();
+                        if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.Length != 64) { continue; }
+                        count++;
+
+                        yield return record;
+                    }
+                }
+
+            }
+        }
+
+        /// <summary> 
         /// Method to load formatted training data from the file specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
         /// </summary>
         public IEnumerable<BinaryHashModel> LoadFileForBinary(string filePath, int? maxCount = null)
@@ -86,6 +112,12 @@ namespace HashAnalyser.Data
                     {
                         var record = cr.GetRecord<Log>();
                         if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.Label.ToLower() == "benign")
+                        {
+                            bCount++;
+                            if (bCount > 24000) continue;
+                        }
+
                         if (record.Hash.Length != 64) { continue; }
                         count++;
 
@@ -117,7 +149,35 @@ namespace HashAnalyser.Data
                         if (!classes.Contains(record.Label)) continue;
                         count++;
 
-                        yield return new MulticlassHashModel(PositionallyEncode(record.Hash), record.Label.ToLower());
+                        yield return new MulticlassInput(PositionallyEncode(record.Hash), record.Label.ToLower());
+                    }
+                }
+
+            }
+        }
+
+        /// <summary> 
+        /// Method to load formatted training data from the file specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
+        /// </summary>
+        public IEnumerable<ClusteringHashModel> LoadFileForClustering(string filePath, int? maxCount = null)
+        {
+            var classes = new[] { "c&c", "port-scan", "dos" };
+            using (var reader = new StreamReader(filePath))
+            {
+                using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
+                {
+                    var count = 0;
+
+                    while (cr.Read())
+                    {
+                        var record = cr.GetRecord<Log>();
+
+                        if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.Hash.Length != 64) { continue; }
+                        if (!classes.Contains(record.Label)) continue;
+                        count++;
+
+                        yield return new ClusteringHashModel(PositionallyEncode(record.Hash), MapClusteringLabel(record.Label));
                     }
                 }
 
@@ -167,6 +227,22 @@ namespace HashAnalyser.Data
                 var encodedIndex = map.First(x => x.Value == input[i]).Key;
                 var hexValue = encodedIndex - (i * 16);
                 sb.Append(hexValue.ToString("X") + " ");
+            }
+            return sb.ToString();
+        }
+
+
+        /// <summary> 
+        /// Method to return encoded hash, back to its hexidecimal representation.
+        /// </summary>
+        public string Tokenize(string encodedString)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < encodedString.Length; i++)
+            {
+
+                if(i != (encodedString.Length - 1)) sb.Append(encodedString[i] + " ");
+                else sb.Append(encodedString[i]);
             }
             return sb.ToString();
         }
@@ -304,6 +380,18 @@ namespace HashAnalyser.Data
                 case "port-scan": return "2";
                 case "c&c": return "3";
                 case "dos": return "4";
+                default: throw new InvalidDataException();
+            }
+        }
+
+
+        protected uint MapClusteringLabel(string label)
+        {
+            switch (label.ToLower())
+            {
+                case "port-scan": return 2;
+                case "c&c": return 3;
+                case "dos": return 4;
                 default: throw new InvalidDataException();
             }
         }

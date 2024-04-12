@@ -37,7 +37,7 @@ namespace SSDHash.Preprocessing
                 element = element.Parent;
             }
 
-            return string.Join(".", elements.Select(e => e.Name.LocalName));
+            return string.Join("-", elements.Select(e => e.Name.LocalName));
         }
     }
 }

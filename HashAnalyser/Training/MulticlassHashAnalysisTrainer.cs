@@ -1,9 +1,12 @@
 ﻿using HashAnalyser.Data;
 using HashAnalyser.Data.Models.Binary;
+using HashAnalyser.Data.Models.Multiclass;
 using HashAnalyser.Training.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.Tokenizers;
+using Microsoft.ML.Transforms.Text;
+using SkiaSharp;
 using TorchSharp;
 using static Microsoft.ML.DataOperationsCatalog;
 
@@ -35,6 +38,7 @@ namespace HashAnalyser.Training
             var data = _formatter.LoadFileForMulticlass(dataSetFileName);
 
             IDataView dataView = _mlContext.Data.LoadFromEnumerable(data);
+
             Train(trainer, dataView, "MulticlassModel.zip");
         }
 

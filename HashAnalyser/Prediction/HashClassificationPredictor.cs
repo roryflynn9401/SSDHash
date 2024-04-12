@@ -60,7 +60,7 @@ namespace HashAnalyser.Prediction
         /// </summary>
         public IDataView? PredictMulticlass(string[] hashes, string modelName = "MulticlassModel.zip")
         {
-            var input = hashes.Select(x => new HashInput(x));
+            var input = hashes.Select(x => new MulticlassHashModel(x));
             var inputData = _mlContext.Data.LoadFromEnumerable(input);
 
             return PredictMulticlass(inputData, modelName);
@@ -97,7 +97,7 @@ namespace HashAnalyser.Prediction
 
             if (binaryResults.Count == 0) throw new ArgumentNullException(nameof(binaryResults));
             
-            EvaluateBinaryPredictions(inputData);
+            EvaluateBinaryPredictions(inputData, binaryResults);
             return binaryResults;
         }
 
@@ -129,7 +129,7 @@ namespace HashAnalyser.Prediction
         /// <summary>
         /// Method for outputing metrics for labeled, unseen data. Requires Predict to have been run which populates <paramref name="_inputData">_inputData</paramref> and <paramref name="_results">_results</paramref>
         /// </summary>
-        public void EvaluateBinaryPredictions(BinaryHashModel[] inputData)
+        public void EvaluateBinaryPredictions(BinaryHashModel[] inputData, Dictionary<string, BinaryHashPrediction> binaryResults)
         {
             int correctPredictions = 0;
             int incorrectPredictions = 0;
@@ -140,7 +140,7 @@ namespace HashAnalyser.Prediction
 
             var predictions = new Dictionary<string, int>();
 
-            foreach (var result in _binaryResults)
+            foreach (var result in binaryResults)
             {
                 var label = inputData.FirstOrDefault(x => x.Hash == result.Key)?.Label;
 
