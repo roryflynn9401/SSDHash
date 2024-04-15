@@ -34,6 +34,7 @@ predict: - Predict using each model individually
     Arguments:
         -b|                 - Predicts the class of a hash record using a binary classification model  (benign, malicious)
         -m|                 - Predicts the class of a hash record using a multiclass classification model (c&c, dos etc.)
+        -l|                 - Predicts the class of the chosen model using a labelled dataset, outputting relevant accuracy metrics
     Variables
         --dataset           - File path for model inputs in CSV format
 pipeline:   - Takes fuzzy hash inputs and performs multi-stage classification, outputting malicious records and their behaviour type in file output
