@@ -83,12 +83,12 @@ namespace HashAnalyser.Data
 
                     while (cr.Read())
                     {
-                        var record = cr.GetRecord<string>();
+                        var record = cr.GetRecord<Log>();
                         if (maxCount != null && count > maxCount) { yield break; }
-                        if (record.Length != 64) { continue; }
+                        if (record.Hash?.Length != 64) { continue; }
                         count++;
 
-                        yield return record;
+                        yield return PositionallyEncode(record.Hash);
                     }
                 }
 
@@ -226,7 +226,7 @@ namespace HashAnalyser.Data
 
                 var encodedIndex = map.First(x => x.Value == input[i]).Key;
                 var hexValue = encodedIndex - (i * 16);
-                sb.Append(hexValue.ToString("X") + " ");
+                sb.Append(hexValue.ToString("X"));
             }
             return sb.ToString();
         }

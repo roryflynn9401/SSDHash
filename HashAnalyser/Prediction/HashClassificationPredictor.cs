@@ -85,7 +85,7 @@ namespace HashAnalyser.Prediction
             ITransformer model = _mlContext.Model.Load(modelName, out var schema);
             TrainingDataFormatter _formatter = new(dataSetFileName);
             BinaryHashModel[] inputData = _formatter.LoadFileForBinary(dataSetFileName).ToArray();
-            
+
             if (inputData is null || inputData.Length == 0) throw new ArgumentNullException(nameof(inputData));
 
             var engine = _mlContext.Model.CreatePredictionEngine<BinaryHashModel, BinaryHashPrediction>(model);
@@ -96,7 +96,7 @@ namespace HashAnalyser.Prediction
             }
 
             if (binaryResults.Count == 0) throw new ArgumentNullException(nameof(binaryResults));
-            
+
             EvaluateBinaryPredictions(inputData, binaryResults);
             return binaryResults;
         }
@@ -190,6 +190,8 @@ namespace HashAnalyser.Prediction
                 Console.WriteLine(kvp.Key + " : " + kvp.Value);
             }
         }
-
+        public void EvaluateMulticlassPredictions(MulticlassHashModel[] inputData, Dictionary<string, MulticlassHashPrediction> multiclassResults)
+        {
+        }
     }
 }

@@ -14,7 +14,6 @@ namespace HashAnalyser.Training.Models
                     ngramLength: 3,
                     useAllLengths: false,
                     weighting: NgramExtractingEstimator.WeightingCriteria.Idf))
-                .Append(mlContext.Transforms.Conversion.ConvertType("NgramFeatures", outputKind: DataKind.Single))
                 .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(labelColumnName: "Label", featureColumnName: "NgramFeatures"))
                 .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 

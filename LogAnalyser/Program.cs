@@ -1,5 +1,7 @@
 ﻿using BenchmarkDotNet.Running;
 using CsvHelper;
+using HashAnalyser.Data;
+using HashAnalyser.Data.Models;
 using HashAnalyser.Data.Models.Binary;
 using HashAnalyser.Data.Models.Multiclass;
 using HashAnalyser.Prediction;
@@ -84,10 +86,17 @@ namespace LogAnalyser
                 switch (arg.ToLower())
                 {
                     case "-b":
-                        PredictBinaryModel(trainArgs);
+                        if(trainArgs.Contains("-l"))
+                            PredictLabeledBinaryModel(trainArgs);
+                        else
+                            PredictBinaryModel(trainArgs);
                         break;
+
                     case "-m":
-                        PredictMulticlassModel(trainArgs);
+                        if (trainArgs.Contains("-l"))
+                            PredictLabeledMulticlassModel(trainArgs);
+                        else
+                            PredictMulticlassModel(trainArgs);
                         break;
                 }
             }
@@ -105,14 +114,14 @@ namespace LogAnalyser
         }
 
 
-        private static async Task ProcessHashCommand(string[] trainArgs)
+        private static async Task ProcessHashCommand(string[] args)
         {
-            foreach (var arg in trainArgs)
+            foreach (var arg in args)
             {
                 switch (arg.ToLower())
                 {
                     case "-s":
-                        if (trainArgs.Contains("--dataset"))
+                        if (args.Contains("--dataset"))
                         {
                             Console.WriteLine("Dataset supplied in single record mode. Use -m to process files");
                             return;
@@ -137,12 +146,13 @@ namespace LogAnalyser
                         }
                         break;
                     case "-m":
-                        string? filePath = GetDatasetPath(trainArgs);
+                        string? filePath = GetDatasetPath(args);
                         if (filePath is null) return;
 
                         var hashes = await HashProcessing.ComputeHashesFromFile(filePath);
                         if (hashes is null) return;
-                        WriteCsv(hashes);
+                        var fileOutHashes = hashes.Select(x => new HashInput(x)).ToArray();
+                        WriteCsv(fileOutHashes);
                         break;
                 }
             }
@@ -162,7 +172,7 @@ namespace LogAnalyser
                         BenchmarkRunner.Run<PipelinePerformanceBenchmarks>();
                         return;
                     case "-v":
-                        var argIndex = Array.IndexOf(args, "-v");
+                        var argIndex = Array.IndexOf(args, "--hash");
                         var hashIndex = argIndex + 1;
                         if(hashIndex >= args.Length)
                         {
@@ -199,6 +209,7 @@ namespace LogAnalyser
                     Arguments:
                     -b|                 - Predicts the class of a hash record using a binary classification model  (benign, malicious)
                     -m|                 - Predicts the class of a hash record using a multiclass classification model (c&c, dos etc.)
+                    -l|                 - Predicts the class of the chosen model using a labelled dataset, outputting relevant accuracy metrics
                 Variables
                     --dataset           - File path for model inputs in CSV format
             pipeline:   - Takes fuzzy hash inputs and performs multi-stage classification, outputting malicious records and their behaviour type in file output
@@ -251,10 +262,60 @@ namespace LogAnalyser
         }
 
 
-        private static Dictionary<string, BinaryHashPrediction>? PredictBinaryModel(string[] trainArgs)
+        private static BinaryHashPrediction[]? PredictBinaryModel(string[] trainArgs)
         {
             var transformer = new HashClassificationPredictor();
             string ? filePath = GetDatasetPath(trainArgs); ;
+
+            if (filePath is null)
+            {
+                PrintInvalidFileText();
+                return null;
+            }
+            TrainingDataFormatter _formatter = new(filePath);
+            var inputData = _formatter.LoadFile(filePath).ToArray();
+
+            var results = transformer.PredictBinary(inputData);
+            var mlContext = new MLContext(0);
+
+            var predictions = mlContext.Data.CreateEnumerable<BinaryHashPrediction>(results,false).ToArray();
+            if(!predictions.Any()) return null;
+            var decodedHashes = predictions.Select(x => new BinaryHashPrediction { Hash = _formatter.PositionallyDecode(x.Hash), PredictedLabel = x.PredictedLabel }).ToArray();
+            WriteCsv(decodedHashes);
+            
+            return decodedHashes;
+        }
+
+        private static MulticlassHashPrediction[]? PredictMulticlassModel(string[] trainArgs)
+        {
+            var transformer = new HashClassificationPredictor();
+            string? filePath = GetDatasetPath(trainArgs);
+
+            if (filePath is null)
+            {
+                PrintInvalidFileText();
+                return null;
+            }
+
+
+            TrainingDataFormatter _formatter = new(filePath);
+            var inputData = _formatter.LoadFile(filePath).ToArray();
+
+            var results = transformer.PredictMulticlass(inputData);
+            var mlContext = new MLContext(0);
+
+            var predictions = mlContext.Data.CreateEnumerable<MulticlassHashPrediction>(results, false).ToArray();
+            if (!predictions.Any()) return null;
+            var decodedHashes = predictions.Select(x => new MulticlassHashPrediction { Hash = _formatter.PositionallyDecode(x.Hash), PredictedLabel = x.PredictedLabel }).ToArray();
+            WriteCsv(decodedHashes);
+
+            return decodedHashes;
+        }
+
+        private static Dictionary<string, BinaryHashPrediction>? PredictLabeledBinaryModel(string[] trainArgs)
+        {
+            var transformer = new HashClassificationPredictor();
+            string? filePath = GetDatasetPath(trainArgs); ;
 
             if (filePath is null)
             {
@@ -265,7 +326,7 @@ namespace LogAnalyser
             return transformer.PredictLabeledBinary(filePath);
         }
 
-        private static Dictionary<string, MulticlassHashPrediction>? PredictMulticlassModel(string[] trainArgs)
+        private static Dictionary<string, MulticlassHashPrediction>? PredictLabeledMulticlassModel(string[] trainArgs)
         {
             var transformer = new HashClassificationPredictor();
             string? filePath = GetDatasetPath(trainArgs);
@@ -278,6 +339,7 @@ namespace LogAnalyser
 
             return transformer.PredictLabeledMulticlass(filePath);
         }
+
 
         private static string? GetDatasetPath(string[] args)
         {
@@ -304,7 +366,7 @@ namespace LogAnalyser
         {
             try
             {
-                using (var sw = new StreamWriter(outputFileName+".csv"))
+                using (var sw = new StreamWriter(outputFileName+".csv", false))
                 {
                     using (var csvw = new CsvWriter(sw, CultureInfo.InvariantCulture))
                     {
@@ -314,7 +376,7 @@ namespace LogAnalyser
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Error writing output to file. Check the output path is valid.");
+                Console.WriteLine("Error writing output to file. Check the output path is valid.\n" + ex.Message);
             }
             
         }
