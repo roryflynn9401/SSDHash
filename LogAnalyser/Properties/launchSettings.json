@@ -2,7 +2,7 @@
   "profiles": {
     "LogAnalyser": {
       "commandName": "Project",
-      "commandLineArgs": "test -v --hash 00000020000000004000000000600080000A00D00000500090C10000E0B0003"
+      "commandLineArgs": "predict -b --dataset trainingData.csv"
     }
   }
 }

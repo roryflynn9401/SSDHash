@@ -136,7 +136,7 @@ namespace LogAnalyser
 
                         var ssdhash = new HashExtractor();
                         var hash = ssdhash.GetHash(input);
-                        if(hash != null)
+                        if (hash != null)
                         {
                             Console.WriteLine("Hash: " + hash);
                         }
