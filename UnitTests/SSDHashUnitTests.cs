@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LogAnalyser.Testing
+namespace UnitTests
 {
     [TestFixture]
     public class SSDHashUnitTests
