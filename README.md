@@ -10,6 +10,7 @@
 # Requirements
 ## Framework
 - .Net 7.0
+- Nvidia CUDA toolkit
 
 ## Packages
 - ML.Net
@@ -17,6 +18,9 @@
 - TorchSharp-cuda-windows or TorchSharp-cpu-windows (or their linux equivalents)
 - BenchmarkDotnet (For Performance benchmarks)
 - Scottplot (for visualizations)
+- NUnit
+- Json.Net
+- CsvHelper
 
 # Usage
 ```yaml
