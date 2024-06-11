@@ -1,5 +1,12 @@
-﻿using Microsoft.ML;
+﻿using HashAnalyser.Data.Models;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using Microsoft.ML.Transforms;
+using Microsoft.ML.Transforms.Image;
 using Microsoft.ML.Transforms.Text;
+using SkiaSharp;
+using System.Globalization;
 
 namespace HashAnalyser.Training.Models
 {
@@ -24,5 +31,74 @@ namespace HashAnalyser.Training.Models
                                     weighting: NgramExtractingEstimator.WeightingCriteria.Idf))
                                 .Append(mlContext.Transforms.Concatenate("Features", "NgramFeatures", "PositionTokens"))
                                 .Append(mlContext.BinaryClassification.Trainers.LdSvm(labelColumnName: "Label", featureColumnName: "Features"));
+
+        internal static IEstimator<ITransformer> GetRawLogModel(MLContext mlContext) => mlContext.Transforms.Concatenate("LogText", nameof(RawLogRecord.ts), nameof(RawLogRecord.uid), nameof(RawLogRecord.id_orig_h),
+                nameof(RawLogRecord.id_orig_p), nameof(RawLogRecord.id_resp_h), nameof(RawLogRecord.id_resp_p), nameof(RawLogRecord.proto), nameof(RawLogRecord.service),
+                nameof(RawLogRecord.duration), nameof(RawLogRecord.orig_bytes), nameof(RawLogRecord.resp_bytes), nameof(RawLogRecord.conn_state), nameof(RawLogRecord.local_orig),
+                nameof(RawLogRecord.local_resp), nameof(RawLogRecord.missed_bytes), nameof(RawLogRecord.history), nameof(RawLogRecord.orig_pkts), nameof(RawLogRecord.orig_ip_bytes),
+                nameof(RawLogRecord.resp_pkts), nameof(RawLogRecord.resp_ip_bytes))
+                                .Append(mlContext.Transforms.Text.TokenizeIntoWords("TokenizedText", "LogText"))
+                                .Append(mlContext.Transforms.Text.ApplyWordEmbedding("Embeddings", "TokenizedText", WordEmbeddingEstimator.PretrainedModelKind.GloVe300D))
+                                .Append(mlContext.BinaryClassification.Trainers.LdSvm(labelColumnName: "label", featureColumnName: "Embeddings"));
+
+
+        internal static IEstimator<ITransformer> GetImageModel(MLContext mlContext) => mlContext.Transforms.Conversion.MapValueToKey("Label")
+                .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "Hash"))
+                .Append(mlContext.Transforms.CustomMapping<InputData, OutputData>(TokensToVectorMapping, "TokensMapping"))
+                .Append(mlContext.Transforms.ConvertToImage(16, 64, outputColumnName: "HashImage", inputColumnName: "ImageVector", colorsPresent: ImagePixelExtractingEstimator.ColorBits.Green))
+                .Append(mlContext.Transforms.ExtractPixels(
+                    inputColumnName: "HashImage",
+                    outputColumnName: "FeatureImage",
+                    outputAsFloatArray: false))
+                .Append(mlContext.Transforms.CustomMapping<InputImage, OutputImage>(FixedToVarBuffer, "FixedToVarBuff"))
+                .Append(mlContext.MulticlassClassification.Trainers.ImageClassification(featureColumnName: "Image"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+
+        private static void TokensToVectorMapping(InputData input, OutputData output)
+        {
+            float[,] vector = new float[16, 64];
+            for (int i = 0; i < 64; i++)
+            {
+                for (int j = 0; j < 16; j++)
+                {
+                    vector[j, i] = 0;
+                }
+            }
+            for (int i = 0; i < input.Tokens.Length && i < 64; i++)
+            {
+                var hexValue = int.Parse(input.Tokens[i], NumberStyles.AllowHexSpecifier);
+                var pixelValue = hexValue * 17;
+                vector[hexValue, i] = pixelValue;
+            }
+            output.ImageVector = vector;
+        }
+
+
+        private static void FixedToVarBuffer(InputImage input, OutputImage output) => output.Image = input.FeatureImage;
     }
+
+    public class InputData
+    {
+        public string[] Tokens { get; set; }
+    }
+
+    public class OutputData
+    {
+        [VectorType(16, 64)]
+        public float[,] ImageVector { get; set; }
+    }
+
+    class InputImage
+    {
+        [VectorType(1)]
+        public VBuffer<Byte> FeatureImage; 
+    }
+
+    class OutputImage
+    {
+        [VectorType()]
+        public VBuffer<Byte> Image;
+    }
+
 }

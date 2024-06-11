@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="SSDHash.HashExtractor">
+    <Position X="3.25" Y="1.5" Width="2" />
+    <TypeIdentifier />
+  </Class>
+  <Class Name="SSDHash.HashProcessing">
+    <Position X="3.25" Y="4.25" Width="2" />
+    <TypeIdentifier />
+  </Class>
+  <Class Name="SSDHash.Preprocessing.JsonProcessor" BaseTypeListCollapsed="true">
+    <Position X="6" Y="3" Width="1.5" />
+    <Members>
+      <Method Name="JsonProcessor" Hidden="true" />
+    </Members>
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="SSDHash.Preprocessing.XmlProcessor" BaseTypeListCollapsed="true">
+    <Position X="6" Y="1.5" Width="1.5" />
+    <Members>
+      <Method Name="XmlProcessor" Hidden="true" />
+    </Members>
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="SSDHash.Preprocessing.CsvProcessor">
+    <Position X="6" Y="4.5" Width="1.5" />
+    <Members>
+      <Method Name="CsvProcessor" Hidden="true" />
+    </Members>
+    <TypeIdentifier />
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="SSDHash.Preprocessing.IDataProcessor">
+    <Position X="8" Y="3" Width="1.5" />
+    <TypeIdentifier />
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

@@ -121,7 +121,7 @@ namespace HashAnalyser.Data
                         if (record.Hash.Length != 64) { continue; }
                         count++;
 
-                        yield return new BinaryHashModel(PositionallyEncode(record.Hash), MapBinaryLabel(record.Label.ToLower()));
+                        yield return new BinaryHashModel(Tokenize(record.Hash), MapBinaryLabel(record.Label.ToLower()));
                     }
                 }
 
@@ -149,7 +149,7 @@ namespace HashAnalyser.Data
                         if (!classes.Contains(record.Label)) continue;
                         count++;
 
-                        yield return new MulticlassInput(PositionallyEncode(record.Hash), record.Label.ToLower());
+                        yield return new MulticlassInput(Tokenize(record.Hash), record.Label.ToLower());
                     }
                 }
 
@@ -178,6 +178,117 @@ namespace HashAnalyser.Data
                         count++;
 
                         yield return new ClusteringHashModel(PositionallyEncode(record.Hash), MapClusteringLabel(record.Label));
+                    }
+                }
+
+            }
+        }
+
+        /// <summary> 
+        /// Method to load formatted training data from the file specifed in <paramref name="filePath"/>. If no <paramref name="maxCount"/> is suppled, the whole file will be read.
+        /// </summary>
+        public IEnumerable<BinaryRawLogModel> LoadRawLogFileForBinary(string filePath, int? maxCount = null)
+        {
+            int bCount = 0;
+            int psCount = 0, ddosCount = 0, ccCount = 0;
+
+            var classes = new[] { "PartOfAHorizontalPortScan", "DDoS", "C&C" };
+
+            using (var reader = new StreamReader(filePath))
+            {
+                using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
+                {
+                    var count = 0;
+
+                    while (cr.Read())
+                    {
+                        var record = cr.GetRecord<RawLogRecord>();
+                        if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.label.ToLower() == "benign")
+                        {
+                            bCount++;
+                            if (bCount > 24000) continue;
+                        }
+
+                        if(record.label.ToLower() == "malicious")
+                        {
+                            if (!classes.Contains(record.detailed_label)) continue;
+                            switch (record.detailed_label)
+                            {
+                                case "PartOfAHorizontalPortScan":
+                                    if (psCount > 8000) continue;
+                                    psCount++; 
+                                    break;
+                                case "DDoS":
+                                    if (ddosCount > 8000) continue;
+                                    ddosCount++; 
+                                    break;
+                                case "C&C":
+                                    if (ccCount > 8000) continue;
+                                    ccCount++;
+                                    break;
+                            }
+                            
+                        }
+
+                        count++;
+
+                        yield return new BinaryRawLogModel(record);
+                    }
+                }
+
+            }
+        }
+
+        public IEnumerable<MulticlassRawLogModel> LoadRawLogFileForMulticlass(string filePath, int? maxCount = null)
+        {
+            int psCount = 0, ddosCount = 0, ccCount = 0;
+
+            var classes = new[] { "PartOfAHorizontalPortScan", "DDoS", "C&C" };
+
+            using (var reader = new StreamReader(filePath))
+            {
+                using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
+                {
+                    var count = 0;
+
+                    while (cr.Read())
+                    {
+                        var label = string.Empty;
+                        var record = cr.GetRecord<RawLogRecord>();
+                        if (maxCount != null && count > maxCount) { yield break; }
+                        if (record.label.ToLower() == "benign")
+                        {
+                            continue;
+                        }
+
+                        if (record.label.ToLower() == "malicious")
+                        {
+                            if (!classes.Contains(record.detailed_label)) continue;
+                            switch (record.detailed_label)
+                            {
+                                case "PartOfAHorizontalPortScan":
+                                    if (psCount > 8000) continue;
+                                    psCount++;
+                                    label = "port-scan";
+                                    break;
+                                case "DDoS":
+                                    if (ddosCount > 8000) continue;
+                                    ddosCount++;
+                                    label = "ddos";
+                                    break;
+                                case "C&C":
+                                    if (ccCount > 8000) continue;
+                                    ccCount++;
+                                    label = "c&c";
+                                    break;
+                            }
+
+                        }
+
+                        count++;
+
+                        yield return new MulticlassRawLogModel(record, label);
                     }
                 }
 

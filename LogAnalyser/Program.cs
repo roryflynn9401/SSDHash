@@ -75,6 +75,18 @@ namespace LogAnalyser
                     case "-c":
                         TrainClusteringModel(trainArgs);
                         break;
+                    case "-rb":
+                        TrainRawBinaryModel(trainArgs);
+                        break;
+                    case "-rm":
+                        TrainRawMulticlassModel(trainArgs);
+                        break;
+                    case "-ib":
+                        TrainImageBinaryModel(trainArgs);
+                        break;
+                    case "-im":
+                        TrainImageMulticlassModel(trainArgs);
+                        break;
                 }
             }
         }
@@ -247,6 +259,14 @@ namespace LogAnalyser
         private static void TrainMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassHashAnalysisTrainer());
 
         private static void TrainClusteringModel(string[] trainArgs) => TrainModel(trainArgs, new ClusteringHashAnalysisTrainer());
+
+        private static void TrainRawBinaryModel(string[] trainArgs) => TrainModel(trainArgs, new BinaryRawLogAnalysisTrainer());
+        
+        private static void TrainRawMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassRawLogAnalysisTrainer());
+
+        private static void TrainImageBinaryModel(string[] trainArgs) => TrainModel(trainArgs, new BinaryLogImageAnalysisTrainer());
+
+        private static void TrainImageMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassLogImageAnalysisTrainer());
 
         private static void TrainModel(string[] trainArgs, HashAnalysisTrainer trainer)
         {
