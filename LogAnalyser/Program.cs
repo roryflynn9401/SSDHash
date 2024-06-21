@@ -9,9 +9,12 @@ using HashAnalyser.Training;
 using LogAnalyser.Processing;
 using LogAnalyser.Testing;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 using SkiaSharp;
 using SSDHash;
 using System.Globalization;
+using static Microsoft.ML.Transforms.ValueToKeyMappingEstimator;
+using static TorchSharp.torch.utils;
 
 namespace LogAnalyser
 {
@@ -19,10 +22,10 @@ namespace LogAnalyser
     {
         private HashAnalysisTrainer? _trainer;
 
+
         public static async Task Main(string[] args)
         {
-
-            if(args.Contains("--help")) HelpMenu();
+            if (args.Contains("--help")) HelpMenu();
             if (args.Length < 2)
             {
                 Console.WriteLine("Invalid arguements supplied. Usage: <tool> <command> <args>");
@@ -57,6 +60,9 @@ namespace LogAnalyser
                 case "test":
                     ProcessTestCommand(commandParams);
                     break;
+                case "image":
+                    await ProcessImageGenerationCommand(commandParams);
+                    break;
             }
         }
 
@@ -74,6 +80,18 @@ namespace LogAnalyser
                         break;
                     case "-c":
                         TrainClusteringModel(trainArgs);
+                        break;
+                    case "-rb":
+                        TrainRawBinaryModel(trainArgs);
+                        break;
+                    case "-rm":
+                        TrainRawMulticlassModel(trainArgs);
+                        break;
+                    case "-ib":
+                        TrainImageBinaryModel(trainArgs);
+                        break;
+                    case "-im":
+                        TrainImageMulticlassModel(trainArgs);
                         break;
                 }
             }
@@ -191,6 +209,19 @@ namespace LogAnalyser
 
         }
 
+        private static async Task ProcessImageGenerationCommand(string[] args)
+        {
+            string? filePath = GetDatasetPath(args);
+            if(filePath == null) return;
+            var df = new TrainingDataFormatter("");
+
+            var hashes = df.LoadFileForMulticlass(filePath).ToArray();
+            foreach(var hash in hashes)
+            {
+                await df.GenerateImage(hash.Hash, "D:\\MLData\\images\\"+ hash.Label+"\\" + hash.Hash + ".png");
+            }
+        }
+
         private static void HelpMenu()
         {
             Console.WriteLine($"""
@@ -247,6 +278,14 @@ namespace LogAnalyser
         private static void TrainMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassHashAnalysisTrainer());
 
         private static void TrainClusteringModel(string[] trainArgs) => TrainModel(trainArgs, new ClusteringHashAnalysisTrainer());
+
+        private static void TrainRawBinaryModel(string[] trainArgs) => TrainModel(trainArgs, new BinaryRawLogAnalysisTrainer());
+        
+        private static void TrainRawMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassRawLogAnalysisTrainer());
+
+        private static void TrainImageBinaryModel(string[] trainArgs) => TrainModel(trainArgs, new BinaryLogImageAnalysisTrainer());
+
+        private static void TrainImageMulticlassModel(string[] trainArgs) => TrainModel(trainArgs, new MulticlassLogImageAnalysisTrainer());
 
         private static void TrainModel(string[] trainArgs, HashAnalysisTrainer trainer)
         {
@@ -348,7 +387,7 @@ namespace LogAnalyser
             {
                 if (args[i] == "--dataset")
                 {
-                    if (i < args.Length - 1 && File.Exists(args[i + 1]))
+                    if (i < args.Length - 1 && (File.Exists(args[i + 1]) || Directory.Exists(args[i + 1])))
                     {
                         filePath = args[i + 1];
                         break;

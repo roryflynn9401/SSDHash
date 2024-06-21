@@ -22,5 +22,7 @@
         public string orig_ip_bytes { get; set; }
         public string resp_pkts { get; set; }
         public string resp_ip_bytes { get; set; }
+        public string label { get; set; }
+        public string detailed_label { get; set; }
     }
 }
