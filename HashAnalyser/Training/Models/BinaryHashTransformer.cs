@@ -42,63 +42,10 @@ namespace HashAnalyser.Training.Models
                                 .Append(mlContext.BinaryClassification.Trainers.LdSvm(labelColumnName: "label", featureColumnName: "Embeddings"));
 
 
-        internal static IEstimator<ITransformer> GetImageModel(MLContext mlContext) => mlContext.Transforms.Conversion.MapValueToKey("Label")
-                .Append(mlContext.Transforms.Text.TokenizeIntoWords("Tokens", "Hash"))
-                .Append(mlContext.Transforms.CustomMapping<InputData, OutputData>(TokensToVectorMapping, "TokensMapping"))
-                .Append(mlContext.Transforms.ConvertToImage(16, 64, outputColumnName: "HashImage", inputColumnName: "ImageVector", colorsPresent: ImagePixelExtractingEstimator.ColorBits.Green))
-                .Append(mlContext.Transforms.ExtractPixels(
-                    inputColumnName: "HashImage",
-                    outputColumnName: "FeatureImage",
-                    outputAsFloatArray: false))
-                .Append(mlContext.Transforms.CustomMapping<InputImage, OutputImage>(FixedToVarBuffer, "FixedToVarBuff"))
-                .Append(mlContext.MulticlassClassification.Trainers.ImageClassification(featureColumnName: "Image"))
-                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+        internal static IEstimator<ITransformer> GetImageModel(MLContext mlContext, string dataSetFileName) => mlContext.Transforms.Conversion.MapValueToKey("Label")
+                                .Append(mlContext.MulticlassClassification.Trainers.ImageClassification(featureColumnName: "input"))
+                                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
 
-
-        private static void TokensToVectorMapping(InputData input, OutputData output)
-        {
-            float[,] vector = new float[16, 64];
-            for (int i = 0; i < 64; i++)
-            {
-                for (int j = 0; j < 16; j++)
-                {
-                    vector[j, i] = 0;
-                }
-            }
-            for (int i = 0; i < input.Tokens.Length && i < 64; i++)
-            {
-                var hexValue = int.Parse(input.Tokens[i], NumberStyles.AllowHexSpecifier);
-                var pixelValue = hexValue * 17;
-                vector[hexValue, i] = pixelValue;
-            }
-            output.ImageVector = vector;
-        }
-
-
-        private static void FixedToVarBuffer(InputImage input, OutputImage output) => output.Image = input.FeatureImage;
-    }
-
-    public class InputData
-    {
-        public string[] Tokens { get; set; }
-    }
-
-    public class OutputData
-    {
-        [VectorType(16, 64)]
-        public float[,] ImageVector { get; set; }
-    }
-
-    class InputImage
-    {
-        [VectorType(1)]
-        public VBuffer<Byte> FeatureImage; 
-    }
-
-    class OutputImage
-    {
-        [VectorType()]
-        public VBuffer<Byte> Image;
     }
 
 }

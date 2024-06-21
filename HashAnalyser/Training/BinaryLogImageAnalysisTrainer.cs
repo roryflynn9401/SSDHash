@@ -3,6 +3,7 @@ using HashAnalyser.Training.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using TorchSharp;
+using static Microsoft.ML.Transforms.ValueToKeyMappingEstimator;
 
 namespace HashAnalyser.Training
 {
@@ -16,25 +17,32 @@ namespace HashAnalyser.Training
         /// Class for training a new binary model using the device specified in <paramref name="deviceType"/>. Default is CUDA.
         /// </summary>
         public BinaryLogImageAnalysisTrainer(DeviceType deviceType = DeviceType.CUDA) : base(deviceType) { }
-
-
+        
         public override void TrainModel(string dataSetFileName)
         {
-            var trainer = BinaryHashTransformer.GetImageModel(_mlContext);
+            var trainer = BinaryHashTransformer.GetImageModel(_mlContext, dataSetFileName);
 
-            if (!File.Exists(dataSetFileName))
+            if (!Directory.Exists(dataSetFileName))
             {
                 Console.WriteLine("File does not exist!");
                 return;
             }
+            var df = new TrainingDataFormatter("");
 
-            TrainingDataFormatter _formatter = new(dataSetFileName);
-            var data = _formatter.LoadFileForMulticlass(dataSetFileName);
+            var images = df.LoadImagesFromDirectory(folder: dataSetFileName, useFolderNameAsLabel: true, isBinary: true);
+            var lbls = images.Select(x => x.Label).ToList();
+            IDataView fullImagesDataset = _mlContext.Data.LoadFromEnumerable(images);
 
-            IDataView dataView = _mlContext.Data.LoadFromEnumerable(data);
-            
+            IDataView shuffledFullImagesDataset = _mlContext.Transforms.Conversion.MapValueToKey(outputColumnName: "LabelAsKey", inputColumnName: "Label", keyOrdinality: KeyOrdinality.ByValue)
+                                        .Append(_mlContext.Transforms.LoadRawImageBytes(outputColumnName: "Image", imageFolder: dataSetFileName, inputColumnName: "ImagePath"))
+                                        .Fit(fullImagesDataset).Transform(fullImagesDataset);
 
-            Train(trainer, dataView, "MulticlassImageModel.zip");
+            var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label")
+                                        .Append(_mlContext.MulticlassClassification.Trainers.ImageClassification(featureColumnName: "Image", labelColumnName: "LabelAsKey"))
+                                        .Append(_mlContext.Transforms.Conversion.MapKeyToValue(outputColumnName: "PredictedLabel", inputColumnName: "PredictedLabel"));
+
+
+            Train(pipeline, shuffledFullImagesDataset, "BinaryImageModel.zip");
         }
 
 
@@ -46,7 +54,7 @@ namespace HashAnalyser.Training
             Console.WriteLine("=====================Evaluating model performance on test set=====================\n");
             IDataView transformedTest = model.Transform(data);
 
-            MulticlassClassificationMetrics metrics = _mlContext.MulticlassClassification.Evaluate(transformedTest, labelColumnName: "Label");
+            MulticlassClassificationMetrics metrics = _mlContext.MulticlassClassification.Evaluate(transformedTest, labelColumnName: "LabelAsKey");
 
             Console.WriteLine($""" 
             Macro Accuracy: {metrics.MacroAccuracy}
@@ -59,5 +67,26 @@ namespace HashAnalyser.Training
             """);
         }
 
+    }
+
+    public class ImageData
+    {
+        [LoadColumn(0)]
+        public string ImagePath;
+
+        [LoadColumn(1)]
+        public string Label;
+    }
+
+    class InputData
+    {
+        [VectorType(1)] 
+        public VBuffer<Byte> Image1; 
+    }
+
+    class OutputData
+    {
+        [VectorType()]
+        public VBuffer<Byte> Image;
     }
 }

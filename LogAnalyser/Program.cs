@@ -9,9 +9,12 @@ using HashAnalyser.Training;
 using LogAnalyser.Processing;
 using LogAnalyser.Testing;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 using SkiaSharp;
 using SSDHash;
 using System.Globalization;
+using static Microsoft.ML.Transforms.ValueToKeyMappingEstimator;
+using static TorchSharp.torch.utils;
 
 namespace LogAnalyser
 {
@@ -19,10 +22,10 @@ namespace LogAnalyser
     {
         private HashAnalysisTrainer? _trainer;
 
+
         public static async Task Main(string[] args)
         {
-
-            if(args.Contains("--help")) HelpMenu();
+            if (args.Contains("--help")) HelpMenu();
             if (args.Length < 2)
             {
                 Console.WriteLine("Invalid arguements supplied. Usage: <tool> <command> <args>");
@@ -56,6 +59,9 @@ namespace LogAnalyser
                     break;
                 case "test":
                     ProcessTestCommand(commandParams);
+                    break;
+                case "image":
+                    await ProcessImageGenerationCommand(commandParams);
                     break;
             }
         }
@@ -201,6 +207,19 @@ namespace LogAnalyser
                 }
             }
 
+        }
+
+        private static async Task ProcessImageGenerationCommand(string[] args)
+        {
+            string? filePath = GetDatasetPath(args);
+            if(filePath == null) return;
+            var df = new TrainingDataFormatter("");
+
+            var hashes = df.LoadFileForMulticlass(filePath).ToArray();
+            foreach(var hash in hashes)
+            {
+                await df.GenerateImage(hash.Hash, "D:\\MLData\\images\\"+ hash.Label+"\\" + hash.Hash + ".png");
+            }
         }
 
         private static void HelpMenu()
@@ -368,7 +387,7 @@ namespace LogAnalyser
             {
                 if (args[i] == "--dataset")
                 {
-                    if (i < args.Length - 1 && File.Exists(args[i + 1]))
+                    if (i < args.Length - 1 && (File.Exists(args[i + 1]) || Directory.Exists(args[i + 1])))
                     {
                         filePath = args[i + 1];
                         break;

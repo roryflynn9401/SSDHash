@@ -5,9 +5,15 @@ using HashAnalyser.Data.Models;
 using HashAnalyser.Data.Models.Binary;
 using HashAnalyser.Data.Models.Clustering;
 using HashAnalyser.Data.Models.Multiclass;
+using HashAnalyser.Training;
 using Newtonsoft.Json;
+using ScottPlot;
+using SkiaSharp;
 using SSDHash;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace HashAnalyser.Data
@@ -88,7 +94,7 @@ namespace HashAnalyser.Data
                         if (record.Hash?.Length != 64) { continue; }
                         count++;
 
-                        yield return PositionallyEncode(record.Hash);
+                        yield return record.Hash;
                     }
                 }
 
@@ -133,7 +139,7 @@ namespace HashAnalyser.Data
         /// </summary>
         public IEnumerable<MulticlassHashModel> LoadFileForMulticlass(string filePath, int? maxCount = null)
         {
-            var classes = new[] { "c&c", "port-scan", "dos" };
+            var classes = new[] { "c&c", "port-scan", "dos", "benign"};
             using (var reader = new StreamReader(filePath))
             {
                 using (var cr = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", Encoding = Encoding.UTF8 }))
@@ -149,7 +155,7 @@ namespace HashAnalyser.Data
                         if (!classes.Contains(record.Label)) continue;
                         count++;
 
-                        yield return new MulticlassInput(Tokenize(record.Hash), record.Label.ToLower());
+                        yield return new MulticlassInput(record.Hash, record.Label.ToLower());
                     }
                 }
 
@@ -291,7 +297,62 @@ namespace HashAnalyser.Data
                         yield return new MulticlassRawLogModel(record, label);
                     }
                 }
+            }
+        }
 
+        public IEnumerable<ImageData> LoadImagesFromDirectory(string folder, bool isBinary, bool useFolderNameAsLabel = true)
+        {
+            string[] files = Directory.GetFiles(folder, "*", searchOption: SearchOption.AllDirectories);
+            int bCount = 0;
+            int maxBCount = 24000;
+
+            Console.WriteLine(files.Length + "Image Files");
+            foreach (string file in files)
+            {
+                if (Path.GetExtension(file) != ".png")
+                    continue;
+
+                string label = Path.GetFileName(file);
+
+                if (useFolderNameAsLabel)
+                    label = Directory.GetParent(file).Name;
+                else
+                {
+                    for (int index = 0; index < label.Length; index++)
+                    {
+                        if (!char.IsLetter(label[index]))
+                        {
+                            label = label.Substring(0, index);
+                            break;
+                        }
+                    }
+                }
+                if (!isBinary)
+                {
+                    if (label == "benign") continue;
+                }
+                else
+                {
+                    label = label.ToLower() switch
+                    {
+                        "c&c" => "malicious",
+                        "port-scan" => "malicious",
+                        "dos" => "malicious",
+                        "benign" => "benign",
+                    };
+
+                    if (label == "benign")
+                    {
+                        bCount++;
+                        if (bCount > maxBCount) continue;
+                    }
+                }
+
+                yield return new ImageData()
+                {
+                    ImagePath = file,
+                    Label = label
+                };
             }
         }
 
@@ -443,6 +504,49 @@ namespace HashAnalyser.Data
             return records;
         }
 
+        public async Task GenerateImage(string hash, string fileName)
+        {
+            var hashChars = Tokenize(hash).Split(" ");
+            if (hashChars.Length != 64) return;
+            var hexValues = new int[64];
+            var i = 0;
+
+            foreach (var charValue in hashChars)
+            {
+                var val = int.Parse(charValue, NumberStyles.AllowHexSpecifier);
+                hexValues[i] = val * 68;
+                i++;
+            }
+
+            var imagePixels = new Pixel[64];
+            for(int j =0; j < hexValues.Length; j++)
+            {
+                var hexValue = hexValues[j];
+                int blue = hexValue & 255;
+                int green = (hexValue >> 8) & 255;
+                int red = (hexValue >> 16) & 255;
+                imagePixels[j] = new Pixel(red, green, blue);
+            }
+
+            var pixels = new byte[192];
+            var width = 12;
+            var height = 16;
+
+            for (int k = 0; k < imagePixels.Length; k++)
+            {
+                pixels[k * 3] = (byte)imagePixels[k].Blue;
+                pixels[k * 3 + 1] = (byte)imagePixels[k].Green;
+                pixels[k * 3 + 2] = (byte)imagePixels[k].Red;
+            }
+
+            var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+            var bitmapData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            Marshal.Copy(pixels, 0, bitmapData.Scan0, pixels.Length);
+            bmp.UnlockBits(bitmapData);
+
+            bmp.Save(fileName, System.Drawing.Imaging.ImageFormat.Png);
+        }
+
         /// <summary> 
         /// Method to compute hashes in bulk.
         /// </summary>
@@ -531,5 +635,16 @@ namespace HashAnalyser.Data
 
         public string Hash { get; set; }
         public string Label { get; set; }
+    }
+
+    internal struct Pixel
+    {
+        public Pixel(int red, int green, int blue)
+        {
+            Red = red;
+            Green = green;
+            Blue = blue;
+        }
+        public int Red, Green, Blue;
     }
 }

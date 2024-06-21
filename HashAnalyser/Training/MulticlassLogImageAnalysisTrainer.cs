@@ -3,6 +3,7 @@ using HashAnalyser.Training.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using TorchSharp;
+using static Microsoft.ML.Transforms.ValueToKeyMappingEstimator;
 
 namespace HashAnalyser.Training
 {
@@ -20,21 +21,29 @@ namespace HashAnalyser.Training
 
         public override void TrainModel(string dataSetFileName)
         {
-            var trainer = MulticlassHashTransformer.GetImageModel(_mlContext);
+            var trainer = BinaryHashTransformer.GetImageModel(_mlContext, dataSetFileName);
 
-            if (!File.Exists(dataSetFileName))
+            if (!Directory.Exists(dataSetFileName))
             {
                 Console.WriteLine("File does not exist!");
                 return;
             }
+            var df = new TrainingDataFormatter("");
 
-            TrainingDataFormatter _formatter = new(dataSetFileName);
-            var data = _formatter.LoadFileForMulticlass(dataSetFileName);
+            var images = df.LoadImagesFromDirectory(folder: dataSetFileName, useFolderNameAsLabel: true, isBinary: false);
 
-            IDataView dataView = _mlContext.Data.LoadFromEnumerable(data);
-            
+            IDataView fullImagesDataset = _mlContext.Data.LoadFromEnumerable(images);
 
-            Train(trainer, dataView, "MulticlassImageModel.zip");
+            IDataView shuffledFullImagesDataset = _mlContext.Transforms.Conversion.MapValueToKey(outputColumnName: "LabelAsKey", inputColumnName: "Label", keyOrdinality: KeyOrdinality.ByValue)
+                                        .Append(_mlContext.Transforms.LoadRawImageBytes(outputColumnName: "Image", imageFolder: dataSetFileName, inputColumnName: "ImagePath"))
+                                        .Fit(fullImagesDataset).Transform(fullImagesDataset);
+
+            var pipeline = _mlContext.Transforms.Conversion.MapValueToKey("Label")
+                                        .Append(_mlContext.MulticlassClassification.Trainers.ImageClassification(featureColumnName: "Image", labelColumnName: "LabelAsKey"))
+                                        .Append(_mlContext.Transforms.Conversion.MapKeyToValue(outputColumnName: "PredictedLabel", inputColumnName: "PredictedLabel"));
+
+
+            Train(pipeline, shuffledFullImagesDataset, "MulticlassImageModel.zip");
         }
 
 
@@ -46,7 +55,7 @@ namespace HashAnalyser.Training
             Console.WriteLine("=====================Evaluating model performance on test set=====================\n");
             IDataView transformedTest = model.Transform(data);
 
-            MulticlassClassificationMetrics metrics = _mlContext.MulticlassClassification.Evaluate(transformedTest, labelColumnName: "label");
+            MulticlassClassificationMetrics metrics = _mlContext.MulticlassClassification.Evaluate(transformedTest, labelColumnName: "LabelAsKey");
 
             Console.WriteLine($""" 
             Macro Accuracy: {metrics.MacroAccuracy}
