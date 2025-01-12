@@ -53,7 +53,7 @@ hash:   - Hashes an input using SSDHash
     Variables
         --dataset           - File path for model inputs in JSON,XML or CSV format
 test: - Various performance or validation tests
-    Arguements:
+    Arguments:
         -ssd                - Runs performance tests related to SSDHash (Performance tests must be run in Release mode)
         -ml                 - Runs performance tests related to the ML classifiers (Performance tests must be run in Release mode)
         -v                  - Verify a hash is valid - Supply hash with --hash
