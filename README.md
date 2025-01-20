@@ -1,5 +1,6 @@
 # SSDHash & Log Analysis Tool
-
+# Paper
+https://www.sciencedirect.com/science/article/pii/S016740482500001X?via%3Dihub
 # Features
 - Hash Files or string inputs using SSDHash
 - Train Binary/Multiclass Models on the fuzzy hash outputs
